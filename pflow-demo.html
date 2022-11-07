@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Martin Steppuhn">
+    <title>Power-Flow Demo</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            font-size: 1rem;
+            font-weight: 400;
+            color: #212529;
+        }
+
+        .form-range {
+            -webkit-appearance: none; /* Override default CSS styles */
+            appearance: none;
+            width: 100%; /* Full-width */
+            height: 10px; /* Specified height */
+            background: #d3d3d3; /* Grey background */
+            outline: none; /* Remove outline */
+        }
+
+        input {
+            margin-bottom: 30px;
+        }
+
+        .container {
+            margin: 15px 15px;
+            width: auto;
+
+        }
+
+        @media (min-width: 576px) {
+            .container {
+                margin: 20px auto;
+                width: 80%;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                width: 70%;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .container {
+                width: 60%;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .container {
+                width: 50%;
+            }
+        }
+
+        @media (min-width: 1400px) {
+            .container {
+                width: 40%;
+            }
+        }
+    </style>
+
+</head>
+<body>
+<div class="container">
+    <div id="pflow-bar"></div>
+    <div id="pflow-table" style="margin-top: 20px; margin-bottom: 30px"></div>
+    <hr style="margin-bottom: 20px">
+    <label>PV</label>
+    <input id="range-pv" min="0" max="10000" type="range" class="form-range" value="3000">
+    <label>Home</label>
+    <input id="range-home" min="0" max="3000" type="range" class="form-range" value="600">
+    <label>Battery</label>
+    <input id="range-bat" min="-2400" max="1600" type="range" class="form-range" value="0">
+    <label>Car (Wallbox)</label>
+    <input id="range-car" min="0" max="3680" type="range" class="form-range" value="2200">
+
+    <div>
+        <input id="car-plug" type="checkbox">
+        <label>Plug</label>
+    </div>
+    <div>
+        <input id="car-pvready" type="checkbox">
+        <label>PV-Ready</label>
+    </div>
+    <div>
+        <input id="car-stop" type="checkbox">
+        <label>Wallbox-Stop</label>
+    </div>
+</div>
+<script src="pflow.js?v=1"></script>
+<script>
+    app = {};
+
+    app.init = function () {
+        var setup = {
+            table: [
+                {id: 'pv', type: 'pv'},
+                {id: 'home', type: 'home', sign: -1},
+                {id: 'bat', type: 'bat', sign: -1},
+                {id: 'grid', type: 'grid'},
+                {id: 'car', type: 'car', sign: -1, wallbox: true}],
+            bar: {
+                in: [
+                    {id: 'pv', type: 'pv'},
+                    {id: 'bat', type: 'bat', sign: -1},
+                    {id: 'grid', type: 'grid'}],
+                out: [
+                    {id: 'home', type: 'home'},
+                    {id: 'car', type: 'car'},
+                    {id: 'bat', type: 'bat'},
+                    {id: 'grid', type: 'grid', sign: -1}]
+            }
+        };
+
+        app.pflow = new Pflow('pflow-table', 'pflow-bar', setup);
+
+        document.getElementById('range-pv').addEventListener('input', app.demo);
+        document.getElementById('range-home').addEventListener('input', app.demo);
+        document.getElementById('range-bat').addEventListener('input', app.demo);
+        document.getElementById('range-car').addEventListener('input', app.demo);
+        document.getElementById('car-plug').addEventListener('click', app.demo);
+        document.getElementById('car-pvready').addEventListener('click', app.demo);
+        document.getElementById('car-stop').addEventListener('click', app.demo);
+
+        app.demo();
+    }
+
+    app.demo = function () {
+        var pv = document.getElementById('range-pv').value;
+        var home = document.getElementById('range-home').value;
+        var bat = document.getElementById('range-bat').value;
+        var car = document.getElementById('range-car').value;
+
+        var d = {
+            pv: {
+                power: pv,
+                subline: 'Süd: 3109 W  Nord: 2476 W'
+            },
+            home: {power: home},
+            bat: {
+                power: bat,
+                info: '50%',
+                subline: 'Automatik - Laden'
+            },
+            car: {
+                power: car,
+                info: '11.2 kWh',
+                subline: 'PV - Laden',
+                disable: !document.getElementById('car-plug').checked,
+                wallbox_pvready: document.getElementById('car-pvready').checked,
+                wallbox_stop: document.getElementById('car-stop').checked,
+                wallbox_amp: '3x16A'
+            },
+            grid: {
+                power: -(pv - home - bat - car),
+            },
+            heat: {power: pv}
+        };
+        app.pflow.update(d);
+    }
+
+    window.onload = function () {
+        app.init();
+    }
+</script>
+</body>
+</html>
